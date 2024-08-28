@@ -1,122 +1,12 @@
 import {ApolloServer} from "@apollo/server";
 import {startStandaloneServer} from "@apollo/server/standalone";
-import {GraphQLError} from "graphql";
-import {createAccessToken, createRefreshToken, verifyToken} from "./create-jwt";
-
-const userTable = [];
-const accountTable = [];
-
-const database = {
-  user: userTable,
-  account: accountTable,
-  painting: [],
-};
-
-type User = {
-  userId: number;
-  email: string;
-};
-
-type Account = {
-  id: number;
-  user: User;
-  accessToken: string;
-  refreshToken: string;
-};
-
-type AccessTokenData = {
-  userId: number;
-};
-
-function fetchUser({userId}: Pick<User, "userId">): User {
-  if (!userId) {
-    throw new Error("fetchUser: No user id provided");
-  }
-
-  const user = database.user.find((user) => user.userId === userId);
-
-  return user;
-}
-
-function createUser({email}: Pick<User, "email">) {
-  const newUser = {
-    userId: userTable.length + 1,
-    email,
-  };
-
-  userTable.push(newUser);
-
-  return newUser;
-}
-
-function createAccount({email}) {
-  const user = createUser({email});
-  const accessToken = createAccessToken(user.userId);
-  const refreshToken = createRefreshToken(user.userId);
-
-  const newAccount = {
-    id: accountTable.length + 1,
-    user,
-    accessToken,
-    refreshToken,
-  };
-
-  accountTable.push(newAccount);
-
-  return newAccount;
-}
-
-function fetchAccount(userId: number): {
-  account: Account;
-} {
-  const user = fetchUser({userId});
-
-  const account = database.account.find(
-    (account) => account.email === user.email
-  );
-
-  return {
-    account,
-  };
-}
+import {database} from "./db/database";
+import {createAccount} from "./db/create-account";
+import {isAuthorised} from "./is-authorised";
 
 function createProduct(painting) {
   database.painting.push(painting);
   return painting;
-}
-
-function isAuthorised(accessToken: string, refreshToken: string) {
-  console.log("accessTokenaccessToken", accessToken);
-  try {
-    const data = verifyToken(accessToken);
-    const account = fetchAccount(data.userId);
-
-    return {
-      account,
-    };
-  } catch (error) {
-    console.log("error verifying access token: ", error);
-    // token is expired or signed with a different JWT_SECRET
-    // so now check refresh token
-  }
-
-  try {
-    const data = verifyToken(refreshToken);
-    const {account} = fetchAccount(data.userId);
-
-    return {
-      account,
-      accessToken: createAccessToken(account.user.userId),
-      refreshToken: createRefreshToken(account.user.userId),
-    };
-  } catch (error) {
-    console.log("error verifying refresh token: ", error);
-    throw new GraphQLError("Unauthorized", {
-      extensions: {
-        code: "UNAUTHORIZED",
-      },
-    });
-  }
 }
 
 const typeDefs = `#graphql
@@ -231,9 +121,8 @@ const resolvers = {
       const account = createAccount({email});
 
       return {
-        user: account.user,
-        accessToken: account.accessToken,
-        refreshToken: account.refreshToken,
+        userId: account.userId,
+        userName: account.userName,
       };
     },
     createProduct: (_, __, context) => {
@@ -275,3 +164,6 @@ const main = async () => {
 };
 
 main();
+
+// 1. verifyAccessToken to authenticate user
+// 2. if accesToken is invalid, verifyRefreshToken

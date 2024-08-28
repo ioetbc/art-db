@@ -9,7 +9,7 @@ export const createAccessToken = (userId: number) => {
   const payload: AccessTokenData = {
     userId,
   };
-  return sign(payload, JWT_SECRET, {expiresIn: "10m"});
+  return sign(payload, JWT_SECRET, {expiresIn: "1m"});
 };
 
 export const createRefreshToken = (userId: number) => {
