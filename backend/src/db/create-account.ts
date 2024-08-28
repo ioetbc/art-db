@@ -14,5 +14,11 @@ export const createAccount = ({email}) => {
 
   database.account.push(newAccount);
 
-  return newAccount;
+  const response = {
+    ...newAccount,
+    accessToken,
+    refreshToken,
+  };
+
+  return response;
 };

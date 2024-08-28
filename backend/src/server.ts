@@ -3,6 +3,7 @@ import {startStandaloneServer} from "@apollo/server/standalone";
 import {database} from "./db/database";
 import {createAccount} from "./db/create-account";
 import {isAuthorised} from "./is-authorised";
+import {incrementRefreshTokenVersion} from "./db/increment-refresh-token";
 
 function createProduct(painting) {
   database.painting.push(painting);
@@ -78,6 +79,10 @@ const typeDefs = `#graphql
     refreshToken: String!
   }
 
+  type LogoutResponse {
+    success: Boolean!
+  }
+
   type AccountDetails {
     verified: Boolean!
     user: User!
@@ -98,6 +103,7 @@ const typeDefs = `#graphql
   type Mutation {
     createAccount(email: String!): CreateAccountResponse
     createProduct: Product
+    logoutAllAccounts: LogoutResponse
   }
 `;
 
@@ -116,14 +122,21 @@ const resolvers = {
     },
   },
   Mutation: {
+    logoutAllAccounts: (_, __, context) => {
+      const user = isAuthorised(context.accessToken, context.refreshToken);
+      console.log("user is authorised to log out of all accounts", user);
+
+      incrementRefreshTokenVersion(user.account.userId);
+
+      return {
+        success: true,
+      };
+    },
     createAccount: (_, {email}) => {
       console.log("the email", email);
       const account = createAccount({email});
 
-      return {
-        userId: account.userId,
-        userName: account.userName,
-      };
+      return account;
     },
     createProduct: (_, __, context) => {
       console.log("context", context);
@@ -165,5 +178,4 @@ const main = async () => {
 
 main();
 
-// 1. verifyAccessToken to authenticate user
-// 2. if accesToken is invalid, verifyRefreshToken
+// 1. login endpoint
