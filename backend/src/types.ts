@@ -1,10 +1,10 @@
 export type User = {
-  id: number;
+  id: string;
   email: string;
   refreshTokenVersion: number;
 };
 
 export type Account = {
-  userId: number;
-  userName: string;
+  userId: string;
+  businessName: string;
 };

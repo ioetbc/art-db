@@ -79,7 +79,7 @@ const typeDefs = `#graphql
     refreshToken: String!
   }
 
-  type LogoutResponse {
+  type LogoutAllDevicesResponse {
     success: Boolean!
   }
 
@@ -103,7 +103,7 @@ const typeDefs = `#graphql
   type Mutation {
     createAccount(email: String!): CreateAccountResponse
     createProduct: Product
-    logoutAllAccounts: LogoutResponse
+    logoutAllDevices: LogoutAllDevicesResponse
   }
 `;
 
@@ -122,24 +122,22 @@ const resolvers = {
     },
   },
   Mutation: {
-    logoutAllAccounts: (_, __, context) => {
+    logoutAllDevices: (_, __, context) => {
       const user = isAuthorised(context.accessToken, context.refreshToken);
-      console.log("user is authorised to log out of all accounts", user);
+      console.log("logging out user", user);
 
       incrementRefreshTokenVersion(user.account.userId);
 
       return {
-        success: true,
+        success: true, // return a union or just a boolean?
       };
     },
     createAccount: (_, {email}) => {
-      console.log("the email", email);
       const account = createAccount({email});
 
       return account;
     },
     createProduct: (_, __, context) => {
-      console.log("context", context);
       isAuthorised(context.accessToken, context.refreshToken);
 
       const newProduct = {

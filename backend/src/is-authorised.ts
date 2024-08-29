@@ -6,8 +6,9 @@ import {
   verifyAccessToken,
 } from "./create-jwt";
 import {fetchAccount} from "./db/fetch-account";
-import {getRefreshTokenVersion} from "./db/get-refresh-token-version";
 import {Account} from "./types";
+import {TokenExpiredError} from "jsonwebtoken";
+import {assert} from "console";
 
 export const isAuthorised = (
   accessToken: string,
@@ -18,6 +19,9 @@ export const isAuthorised = (
   refreshToken: string; // remove these from both responses add them elsewhere maybe
 } => {
   try {
+    assert(accessToken, "accessToken is required");
+    assert(refreshToken, "refreshToken is required");
+
     const data = verifyAccessToken(accessToken);
     const {account} = fetchAccount(data.userId);
 
@@ -29,29 +33,21 @@ export const isAuthorised = (
       refreshToken,
     };
   } catch (error) {
-    if (error.name !== "TokenExpiredError") {
-      throw new GraphQLError("Unauthorized", {
+    if (error.name !== TokenExpiredError.name) {
+      throw new GraphQLError("invalid access token reason: unknown", {
         extensions: {
-          code: "UNAUTHORIZED",
+          code: "INVALID_ACCESS_TOKEN",
         },
       });
     }
-    console.log("ACCESS_TOKEN has expired 📆");
   }
 
-  const data = verifyRefreshToken(refreshToken);
-  const refreshTokenVersion = getRefreshTokenVersion(data.userId);
+  console.log("ACCESS_TOKEN has expired 📆");
 
-  if (data.refreshTokenVersion !== refreshTokenVersion) {
-    throw new GraphQLError("login attempt after force logout", {
-      extensions: {
-        code: "USER_FORCED_LOGOUT",
-      },
-    });
-  }
+  const {userId} = verifyRefreshToken(refreshToken);
 
   try {
-    const {account} = fetchAccount(data.userId);
+    const {account} = fetchAccount(userId);
 
     console.log("REFRESH_TOKEN verified 🎉");
 

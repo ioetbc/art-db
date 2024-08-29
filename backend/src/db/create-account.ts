@@ -4,21 +4,19 @@ import {database} from "./database";
 
 export const createAccount = ({email}) => {
   const user = createUser({email});
+  const businessName = "ioetbc/rubberducker";
+
+  const newAccount = {
+    userId: user.id,
+    businessName,
+  };
+
+  console.log("creating account", JSON.stringify(newAccount, null, 4));
+
   const accessToken = createAccessToken(user.id);
   const refreshToken = createRefreshToken(user.id);
 
-  const newAccount = {
-    userId: 1,
-    userName: email.split("@")[0],
-  };
-
   database.account.push(newAccount);
 
-  const response = {
-    ...newAccount,
-    accessToken,
-    refreshToken,
-  };
-
-  return response;
+  return {...user, accessToken, refreshToken};
 };
